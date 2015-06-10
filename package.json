@@ -27,7 +27,8 @@
     "gulp-spawn-mocha": "^2.0.1",
     "istanbul": "^0.3.14",
     "jshint-stylish": "^2.0.0",
-    "mocha": "^2.2.4"
+    "mocha": "^2.2.4",
+    "sinon": "^1.15.1"
   },
   "directories": {
     "test": "test"
@@ -39,5 +40,11 @@
   "bugs": {
     "url": "https://github.com/alexlangberg/node-chronostore/issues"
   },
-  "homepage": "https://github.com/alexlangberg/node-chronostore"
+  "homepage": "https://github.com/alexlangberg/node-chronostore",
+  "dependencies": {
+    "fs-extra": "^0.19.0",
+    "moment": "^2.10.3",
+    "node-uuid": "^1.4.3",
+    "ramda": "^0.14.0"
+  }
 }
