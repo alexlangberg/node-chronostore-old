@@ -73,7 +73,7 @@ describe('writing', function() {
 
 });
 
-describe('reading', function() {
+describe('searching', function() {
 
   beforeEach(function(done) {
     chronostore.write(json, {timestamp: 100}, function() {
@@ -89,19 +89,51 @@ describe('reading', function() {
     fs.removeSync(folder);
   });
 
-  it('returns the filenames of target files', function(done) {
-    chronostore.read(150, 5000, function(error, files) {
+  it('returns the filenames of search files', function(done) {
+    chronostore.search(150, 5000, function(error, files) {
       files.length.should.equal(1);
       parseInt(files[0].name.slice(0,13)).should.equal(2000);
       done();
     });
   });
 
-  it('returns other target files', function(done) {
-    chronostore.read(150, 15000000, function(error, files) {
+  it('returns other search files', function(done) {
+    chronostore.search(150, 15000000, function(error, files) {
       files.length.should.equal(2);
       parseInt(files[0].name.slice(0,13)).should.equal(2000);
       parseInt(files[1].name.slice(0,13)).should.equal(30000);
+      done();
+    });
+  });
+});
+
+describe('reading', function() {
+  beforeEach(function(done) {
+    chronostore.write(text, {timestamp: 100}, function() {
+      chronostore.write(json, {timestamp: 200}, function() {
+        done();
+      });
+    });
+  });
+
+  afterEach(function() {
+    fs.removeSync(folder);
+  });
+
+  it('can read a txt file', function(done) {
+    chronostore.search(100, 100, function(error, files) {
+      chronostore.read(files[0], function(ferror, file) {
+        file.should.equal('foo bar');
+      });
+      done();
+    });
+  });
+
+  it('can read and parse a JSON file', function(done) {
+    chronostore.search(200, 200, function(error, files) {
+      chronostore.read(files[0], function(ferror, file) {
+        file.foo.should.equal('bar');
+      });
       done();
     });
   });
@@ -120,8 +152,8 @@ describe('failing', function() {
     });
   });
 
-  it('throws on wrong read options', function(done) {
-    chronostore.read(150, 5000, {root: './foo'}, function(error) {
+  it('throws on wrong search options', function(done) {
+    chronostore.search(150, 5000, {root: './foo'}, function(error) {
       should.exist(error);
       done();
     });
