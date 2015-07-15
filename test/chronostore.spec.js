@@ -4,159 +4,47 @@ var chai = require('chai');
 chai.use(require('chai-things'));
 var should = chai.should();
 var sinon = require('sinon');
-var fs = require('fs-extra');
-var moment = require('moment');
-
+var through2 = require('through2');
+var vinyl = require('vinyl');
+var source = require('vinyl-source-stream');
 var chronostore = require('../lib/chronostore');
-var folder = './chronostore';
-var text = 'foo bar';
-var json = {foo: 'bar'};
+var fs = require('vinyl-fs');
+var tap = require('gulp-tap');
+
+function logFile(file) {
+  for (var property in file) {
+    if (file.hasOwnProperty(property)) {
+      console.log(property, file[property]);
+    }
+  }
+}
 
 describe('initialization', function() {
 
-  it('loads', function(done) {
-    chronostore.should.have.property('write');
-    chronostore.should.have.property('read');
-    done();
-  });
-
-});
-
-describe('writing', function() {
-
-  it('writes with default options', function(done) {
-    chronostore.write(text, function(error, file) {
-      var content = fs.readFileSync(file).toString();
-      content.should.equal('foo bar');
-      fs.removeSync(folder);
-      done();
+  it('tests', function(done) {
+    var file = new vinyl({
+      path: 'dummy.json',
+      contents: new Buffer('{"dummy":"foo"}')
     });
-  });
 
-  it('writes with custom options', function(done) {
-    var options = {
-      extension: '.csv',
-      timestamp: 123,
-      uuid: 456,
-      root: './testing',
-      format: ['YYYY']
-    };
-    chronostore.write(text, options, function(error, file) {
-      var content = fs.readFileSync(file).toString();
-      content.should.equal('foo bar');
-      file.should.equal('./testing/1970/0000000000123-456.csv');
-      fs.removeSync(options.root);
-      done();
+    var incoming = through2.obj();
+    incoming.push(file);
+    incoming.push(null);
+
+    var writer = through2.obj(function(obj, _, cb) {
+      console.log('object', obj);
+      return cb(null, obj);
     });
-  });
 
-  it('writes with moment object', function(done) {
-    var options = {
-      timestamp: moment(123)
-    };
-    chronostore.write(text, options, function(error, file) {
-      var content = fs.readFileSync(file).toString();
-      content.should.equal('foo bar');
-      fs.removeSync(folder);
-      done();
-    });
-  });
+    var cs = new chronostore();
+    var cs_writer = cs.write();
 
-  it('writes JSON', function(done) {
-    chronostore.write(json, function(error, file) {
-      var content = fs.readJsonSync(file);
-      content.foo.should.equal('bar');
-      fs.removeSync(folder);
-      done();
-    });
-  });
-
-});
-
-describe('searching', function() {
-
-  beforeEach(function(done) {
-    chronostore.write(json, {timestamp: 100}, function() {
-      chronostore.write(json, {timestamp: 2000}, function() {
-        chronostore.write(json, {timestamp: 30000}, function() {
-          done();
-        });
-      });
-    });
-  });
-
-  afterEach(function() {
-    fs.removeSync(folder);
-  });
-
-  it('returns the filenames of search files', function(done) {
-    chronostore.search(150, 5000, function(error, files) {
-      files.length.should.equal(1);
-      parseInt(files[0].name.slice(0,13)).should.equal(2000);
-      done();
-    });
-  });
-
-  it('returns other search files', function(done) {
-    chronostore.search(150, 15000000, function(error, files) {
-      files.length.should.equal(2);
-      parseInt(files[0].name.slice(0,13)).should.equal(2000);
-      parseInt(files[1].name.slice(0,13)).should.equal(30000);
-      done();
-    });
-  });
-});
-
-describe('reading', function() {
-  beforeEach(function(done) {
-    chronostore.write(text, {timestamp: 100}, function() {
-      chronostore.write(json, {timestamp: 200}, function() {
+    incoming.pipe(cs_writer)
+      .pipe(tap(function(obj) {
+        console.log('doneeees');
+        logFile(obj);
         done();
-      });
-    });
-  });
-
-  afterEach(function() {
-    fs.removeSync(folder);
-  });
-
-  it('can read a txt file', function(done) {
-    chronostore.search(100, 100, function(error, files) {
-      chronostore.read(files[0], function(ferror, file) {
-        file.should.equal('foo bar');
-      });
-      done();
-    });
-  });
-
-  it('can read and parse a JSON file', function(done) {
-    chronostore.search(200, 200, function(error, files) {
-      chronostore.read(files[0], function(ferror, file) {
-        file.foo.should.equal('bar');
-      });
-      done();
-    });
-  });
-});
-
-describe('failing', function() {
-
-  it('throws on file write failure', function(done) {
-    sinon.stub(chronostore.fs, 'outputFile', function(file, content, callback) {
-      return callback('Fake sinon error');
-    });
-    chronostore.write(text, function(error) {
-      should.exist(error);
-      error.should.equal('Fake sinon error');
-      done();
-    });
-  });
-
-  it('throws on wrong search options', function(done) {
-    chronostore.search(150, 5000, {root: './foo'}, function(error) {
-      should.exist(error);
-      done();
-    });
+      }));
   });
 
 });
